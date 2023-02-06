@@ -1,0 +1,56 @@
+---
+- name: Download cloudflared binary
+  ansible.builtin.get_url:
+    url: "https://github.com/cloudflare/cloudflared/releases/download/{{ cloudflared_version }}/cloudflared-linux-{{ go_arch }}"
+    dest: "{{ cloudflared_bin_directory }}/cloudflared"
+    owner: root
+    group: root
+    mode: 0111
+    force: true
+    checksum: "sha256:{{ __cloudflared_checksum.stdout_lines }}"
+  retries: 5
+  delay: 2
+  notify:
+    - Restart cloudflared
+  when: cloudflared_installed_version.stdout < cloudflared_version
+
+- name: Set cap_net_bind_service+ep on {{ cloudflared_bin_directory }}/cloudflared
+  community.general.capabilities:
+    path: "{{ cloudflared_bin_directory }}/cloudflared"
+    capability: cap_net_bind_service+ep
+    state: present
+
+- name: Create cloudflared group
+  ansible.builtin.group:
+    name: "{{ cloudflared_system_group }}"
+    state: present
+    system: true
+  when: cloudflared_system_group != "root"
+
+- name: Create cloudflared user
+  ansible.builtin.user:
+    name: "{{ cloudflared_system_user }}"
+    group: "{{ cloudflared_system_group }}"
+    shell: /usr/sbin/nologin
+    system: true
+    createhome: false
+    home: /
+  when: cloudflared_system_user != "root"
+
+- name: Import environment file template
+  ansible.builtin.template:
+    src: cloudflared.env.j2
+    dest: "{{ cloudflared_config_directory }}/cloudflared"
+    owner: "{{ cloudflared_system_user }}"
+    group: "{{ cloudflared_system_group }}"
+    mode: 0440
+  notify:
+    - Restart cloudflared
+
+- name: Create systemd service unit
+  ansible.builtin.template:
+    src: service.j2
+    dest: /etc/systemd/system/cloudflared.service
+    mode: 0644
+  notify:
+    - Restart cloudflared

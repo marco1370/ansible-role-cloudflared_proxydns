@@ -1,0 +1,35 @@
+---
+dependency:
+  name: galaxy
+
+driver:
+  name: docker
+
+platforms:
+  - name: "instance-docker-${MOLECULE_DISTRO:-debian11}-ansible-${CI_PIPELINE_ID:-local}"
+    image: "geerlingguy/docker-${MOLECULE_DISTRO:-debian11}-ansible:${MOLECULE_DISTRO_TAG:-latest}"
+    command: ${MOLECULE_DOCKER_COMMAND:-"/sbin/init"}
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    capabilities:
+      - SYS_ADMIN
+      - NET_ADMIN
+    privileged: true
+    pre_build_image: true
+
+provisioner:
+  name: ansible
+
+scenario:
+  name: default
+  idempotent: true
+  test_sequence:
+    - destroy
+    - create
+    - converge
+    - idempotence
+    - verify
+    - destroy
+
+verifier:
+  name: ansible

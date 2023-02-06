@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  role_name: cloudflared_proxydns
+  namespace: cloudflared_proxydns
+  author: Anthony Dieperink
+  description: Ansible Role to install the cloudflared binary
+  license: MIT
+  min_ansible_version: 2.10
+
+  platforms:
+    - name: Debian
+      versions:
+        - bullseye
+        - buster
+
+  galaxy_tags:
+    - linux
+    - cloudflared
+    - dns
+    - dnsproxy

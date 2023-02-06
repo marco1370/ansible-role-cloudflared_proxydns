@@ -1,0 +1,76 @@
+---
+- block:
+    - name: Get latest release
+      ansible.builtin.uri:
+        url: "https://api.github.com/repos/cloudflare/cloudflared/releases/latest"
+        method: GET
+        return_content: true
+        status_code: 200
+        body_format: json
+        validate_certs: false
+        user: "{{ lookup('env', 'GH_USER') | default(omit) }}"
+        password: "{{ lookup('env', 'GH_TOKEN') | default(omit) }}"
+      no_log: "{{ not lookup('env', 'ANSIBLE_DEBUG') | bool }}"
+      register: _latest_release
+      until: _latest_release.status == 200
+      retries: 5
+
+    - name: Set cloudflared version to "{{ _latest_release.json.tag_name[1:] }}"
+      ansible.builtin.set_fact:
+        cloudflared_version: "{{ _latest_release.json.tag_name[1:] }}"
+  when: cloudflared_version == "latest"
+
+- block:
+    - name: Get tag info
+      ansible.builtin.uri:
+        url: "https://api.github.com/repos/cloudflare/cloudflared/releases/tags/{{ cloudflared_version }}"
+        method: GET
+        return_content: true
+        status_code: 200
+        body_format: json
+        validate_certs: false
+        user: "{{ lookup('env', 'GH_USER') | default(omit) }}"
+        password: "{{ lookup('env', 'GH_TOKEN') | default(omit) }}"
+      no_log: "{{ not lookup('env', 'ANSIBLE_DEBUG') | bool }}"
+      register: __cloudflared_tag_info
+      until: __cloudflared_tag_info.status == 200
+      retries: 5
+
+    - name: Get checksum list
+      ansible.builtin.set_fact:
+        __cloudflared_checksums: "{{ __cloudflared_tag_info.json.body[1:] }}"
+      run_once: true
+
+    - name: Create /tmp/cloudflared_sha256
+      ansible.builtin.file:
+        path: /tmp/cloudflared_sha256
+        state: touch
+      changed_when: false
+
+    - name: Write raw cloudflared checksum array in /tmp/cloudflared_sha256
+      ansible.builtin.lineinfile:
+        path: /tmp/cloudflared_sha256
+        line: "{{ item }}"
+      changed_when: false
+      loop: "{{ __cloudflared_checksums.split('\n') }}"
+
+    - name: Get checksum for "{{ go_arch }}" architecture
+      ansible.builtin.shell: |
+        /usr/bin/cat /tmp/cloudflared_sha256 | \
+          /usr/bin/awk '{ for (i=NF; i>1; i--) printf("%s ",$i); print $1; }' | \
+          /usr/bin/sed 's/\://g;s/\ /\ \ /g' | \
+          /usr/bin/tail -n +4 | \
+          grep 'cloudflared-linux-{{ go_arch }}' | \
+          head -n1 | \
+          awk '{ print $1 }'
+      args:
+        executable: /bin/bash
+      changed_when: false
+      register: __cloudflared_checksum
+
+    - name: Remove /tmp/cloudflared_sha256
+      ansible.builtin.file:
+        path: /tmp/cloudflared_sha256
+        state: absent
+      changed_when: false
+  when: cloudflared_installed_version.stdout < cloudflared_version

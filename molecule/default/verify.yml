@@ -1,0 +1,26 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Check if minio responds correctly
+      command: minio --version
+      changed_when: true
+      register: minio_local_version
+
+    - name: Show restic output version
+      debug: var=minio_local_version.stdout
+
+    - name: Check if http route responds correctly
+      uri:
+        url: "http://localhost:9000"
+        method: GET
+        status_code: 200
+        body_format: json
+        validate_certs: false
+      register: http_result
+      until: http_result.status == 200
+      retries: 5
+
+    - name: Show http result output
+      debug: var=http_result

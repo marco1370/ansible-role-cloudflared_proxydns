@@ -1,0 +1,20 @@
+[Unit]
+Description=cloudflared DNS over HTTPS proxy
+Documentation=https://github.com/cloudflare/cloudflared
+Wants=network-online.target
+After=network-online.target
+AssertFileIsExecutable={{ cloudflared_bin_directory }}/cloudflared
+
+[Service]
+Type=simple
+User={{ cloudflared_system_user }}
+Group={{ cloudflared_system_group }}
+
+EnvironmentFile={{ cloudflared_config_directory }}/cloudflared
+ExecStart={{ cloudflared_bin_directory }}/cloudflared proxy-dns $CLOUDFLARED_OPTS
+
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

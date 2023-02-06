@@ -1,0 +1,8 @@
+---
+- name: Check cloudflared version
+  ansible.builtin.shell: "{{ cloudflared_bin_directory }}/cloudflared --version | awk '{print $3}'"
+  args:
+    executable: /bin/bash
+  ignore_errors: true
+  changed_when: false
+  register: cloudflared_installed_version

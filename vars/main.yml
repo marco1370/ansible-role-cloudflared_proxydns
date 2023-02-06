@@ -1,0 +1,13 @@
+---
+go_arch_map:
+  x86_64: 'amd64'
+  aarch64: 'arm64'
+  # armv7l: 'arm'
+  # armv6l: 'arm'
+
+go_arch: "{{ go_arch_map[ansible_architecture] | default(ansible_architecture) }}"
+
+cloudflared_bin_directory: /usr/local/bin
+cloudflared_config_directory: /etc/default
+cloudflared_system_user: cloudflared
+cloudflared_system_group: "{{ cloudflared_system_user }}"
