@@ -6,7 +6,7 @@ Ansible Role to install the cloudflared binary
 **Put the file in your roles directory**
 ```yaml
 ---
-- src: https://gitlab.com/adieperi/ansible-role-cloudflared_proxydns.git
+- src: https://gitlab.com/mohsenmirzaei91/ansible-role-cloudflared_proxydns.git
   scm: git
   version: main
   name: ansible-role-ansible-role-cloudflared_proxydns
